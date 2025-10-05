@@ -1,0 +1,184 @@
+import java.io.*;
+import java.util.*;
+
+class Book {
+    String id;
+    String title;
+    String author;
+    boolean isIssued;
+
+    public Book(String id, String title, String author, boolean isIssued) {
+        this.id = id;
+        this.title = title;
+        this.author = author;
+        this.isIssued = isIssued;
+    }
+
+    @Override
+    public String toString() {
+        return id + " | " + title + " | " + author + " | " + (isIssued ? "Issued" : "Available");
+    }
+}
+
+public class LibraryManagementSystem {
+    static final String FILE_NAME = "books.txt";
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int choice;
+
+        while (true) {
+            System.out.println("\n==== Library Management System ====");
+            System.out.println("1. Add Book");
+            System.out.println("2. View All Books");
+            System.out.println("3. Search Book by Title");
+            System.out.println("4. Issue Book");
+            System.out.println("5. Return Book");
+            System.out.println("6. Exit");
+            System.out.print("Enter your choice: ");
+
+            choice = sc.nextInt();
+            sc.nextLine(); // consume newline
+
+            switch (choice) {
+                case 1:
+                    addBook(sc);
+                    break;
+                case 2:
+                    viewBooks();
+                    break;
+                case 3:
+                    searchBook(sc);
+                    break;
+                case 4:
+                    issueBook(sc);
+                    break;
+                case 5:
+                    returnBook(sc);
+                    break;
+                case 6:
+                    System.out.println("Exiting...");
+                    return;
+                default:
+                    System.out.println("Invalid choice!");
+            }
+        }
+    }
+
+    static void addBook(Scanner sc) {
+        try {
+            System.out.print("Enter Book ID: ");
+            String id = sc.nextLine();
+            System.out.print("Enter Title: ");
+            String title = sc.nextLine();
+            System.out.print("Enter Author: ");
+            String author = sc.nextLine();
+
+            Book book = new Book(id, title, author, false);
+
+            FileWriter fw = new FileWriter(FILE_NAME, true);
+            fw.write(book.id + "," + book.title + "," + book.author + "," + book.isIssued + "\n");
+            fw.close();
+            System.out.println("Book added successfully.");
+        } catch (IOException e) {
+            System.out.println("Error adding book.");
+        }
+    }
+
+    static void viewBooks() {
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(FILE_NAME));
+            String line;
+            System.out.println("\nID | Title | Author | Status");
+            System.out.println("----------------------------------");
+            while ((line = br.readLine()) != null) {
+                String[] data = line.split(",");
+                Book book = new Book(data[0], data[1], data[2], Boolean.parseBoolean(data[3]));
+                System.out.println(book);
+            }
+            br.close();
+        } catch (IOException e) {
+            System.out.println("Error reading book file.");
+        }
+    }
+
+    static void searchBook(Scanner sc) {
+        try {
+            System.out.print("Enter title to search: ");
+            String keyword = sc.nextLine().toLowerCase();
+            BufferedReader br = new BufferedReader(new FileReader(FILE_NAME));
+            String line;
+            boolean found = false;
+            while ((line = br.readLine()) != null) {
+                String[] data = line.split(",");
+                if (data[1].toLowerCase().contains(keyword)) {
+                    Book book = new Book(data[0], data[1], data[2], Boolean.parseBoolean(data[3]));
+                    System.out.println("Found: " + book);
+                    found = true;
+                }
+            }
+            br.close();
+            if (!found) System.out.println("No book found with that title.");
+        } catch (IOException e) {
+            System.out.println("Error searching book.");
+        }
+    }
+
+    static void issueBook(Scanner sc) {
+        updateBookStatus(sc, true);
+    }
+
+    static void returnBook(Scanner sc) {
+        updateBookStatus(sc, false);
+    }
+
+    static void updateBookStatus(Scanner sc, boolean issue) {
+        try {
+            System.out.print("Enter Book ID: ");
+            String targetId = sc.nextLine();
+            File inputFile = new File(FILE_NAME);
+            File tempFile = new File("temp.txt");
+
+            BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
+
+            String line;
+            boolean found = false;
+
+            while ((line = reader.readLine()) != null) {
+                String[] data = line.split(",");
+                if (data[0].equals(targetId)) {
+                    found = true;
+                    boolean currentStatus = Boolean.parseBoolean(data[3]);
+                    if (issue && currentStatus) {
+                        System.out.println("Book is already issued.");
+                        writer.write(line + "\n");
+                    } else if (!issue && !currentStatus) {
+                        System.out.println("Book is already returned.");
+                        writer.write(line + "\n");
+                    } else {
+                        data[3] = String.valueOf(issue);
+                        writer.write(data[0] + "," + data[1] + "," + data[2] + "," + data[3] + "\n");
+                        System.out.println(issue ? "Book issued successfully." : "Book returned successfully.");
+                    }
+                } else {
+                    writer.write(line + "\n");
+                }
+            }
+
+            reader.close();
+            writer.close();
+
+            if (!found) {
+                System.out.println("Book ID not found.");
+            }
+
+            // Replace original file with updated file
+            inputFile.delete();
+            tempFile.renameTo(inputFile);
+
+        } catch (IOException e) {
+            System.out.println("Error updating book status.");
+        }
+    }
+}
